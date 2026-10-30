@@ -10,7 +10,8 @@ YELLOW="\e[1;33m"
 BLUE="\e[1;34m"
 MAGENTA="\e[1;35m"
 CYAN="\e[1;36m"
-WIZZARD_VERSION="2.5.0"
+WIZZARD_VERSION="2.6.0"
+WIZZARD_URL="https://raw.githubusercontent.com/0xShady/42-wizzard/main/42-wizzard.sh"
 ANIMATION_RATE=0.3
 declare -a ACTIVE_LOADING
 
@@ -150,7 +151,7 @@ function 42-wizzard-brew() {
 		read -r ANSWER
 		if [ "$ANSWER" != "yes" ]
 		then
-			exit 0
+			return 0
 		fi
 	fi
 	echo "installing brew"
@@ -227,17 +228,22 @@ function 42-wizzard-code() {
 }
 
 function 42-wizzard-ssh() {
-	# starting loading animation
-	start_loading_animation "${loading[@]}"
-	# removing old keys if it exists
-	/bin/rm -rf $HOME/.ssh
-	# creating new keys
-	ssh-keygen -C "" -f ~/.ssh/id_rsa -N "" > /dev/null 2>&1
-	# copying public key to clipboard
-	cat ~/.ssh/id_rsa.pub | awk '{print($2)}' | pbcopy
-	sleep 2
-	# stopping loading animation
-	stop_loading_animation
+	KEY="$HOME/.ssh/id_ed25519"
+	if [ -f "$KEY" ]
+		then
+		printf "An SSH key already exists in $YELLOW $KEY $RESET \n"
+		printf "Copy its public key to the clipboard instead of creating a new one? (yes/no)\n"
+		read -r ANSWER
+		if [ "$ANSWER" != "yes" ]
+			then
+			printf "$YELLOW Aborting $RESET \n"
+			return 0
+		fi
+	else
+		mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+		ssh-keygen -t ed25519 -C "$USER@42" -f "$KEY" -N "" > /dev/null 2>&1
+	fi
+	pbcopy < "$KEY.pub"
 	echo "$GREEN SSH key copied to clipboard $RESET \n"
 	echo "$BLUE https://profile.intra.42.fr/gitlab_users $RESET"
 	sleep 1
@@ -379,6 +385,29 @@ function 42-wizzard-pip() {
 	fi
 }
 
+function 42-wizzard-update() {
+	TMP_FILE=$(mktemp)
+	if curl -fsSL "$WIZZARD_URL" -o "$TMP_FILE" && grep -q '^WIZZARD_VERSION=' "$TMP_FILE"
+		then
+		mv "$TMP_FILE" "$HOME/.42-wizzard.sh"
+		source "$HOME/.42-wizzard.sh"
+		printf "42 wizzard $GREEN v$WIZZARD_VERSION $RESET \n"
+	else
+		/bin/rm -f "$TMP_FILE"
+		printf "$RED Update failed $RESET \n"
+	fi
+}
+
+function 42-wizzard-migrate() {
+	if grep -qxF "zsh ~/.42-wizzard-updater.sh" "$HOME/.zshrc" 2> /dev/null
+		then
+		grep -vxF "zsh ~/.42-wizzard-updater.sh" "$HOME/.zshrc" > "$HOME/.zshrc.42-wizzard-tmp"
+		cat "$HOME/.zshrc.42-wizzard-tmp" > "$HOME/.zshrc"
+		/bin/rm -f "$HOME/.zshrc.42-wizzard-tmp"
+	fi
+	/bin/rm -f "$HOME/.42-wizzard-updater.sh"
+}
+
 function 42-wizzard-help() {
 	echo "42-wizzard$GREEN v$WIZZARD_VERSION $RESET"
 	# big thanks to Oummixa
@@ -390,7 +419,7 @@ function 42-wizzard-help() {
 	echo "$GREEN	-clean -c $RESET				Clean your session."
 	echo "$GREEN	-storage -s $RESET				Show your storage and heavy files."
 	echo "$GREEN	-code $RESET					Add code command to your zsh."
-	echo "$GREEN	-ssh $RESET					Generate a new ssh key and copying it to your clipboard."
+	echo "$GREEN	-ssh $RESET					Create an ed25519 ssh key (or reuse yours) and copy it to your clipboard."
 	echo "$GREEN	-brew $RESET					Install brew."
 	echo "$GREEN	-docker $RESET				Install docker."
 	echo "$GREEN	-nvm $RESET					Install nvm."
@@ -399,7 +428,7 @@ function 42-wizzard-help() {
 	echo "$GREEN	-oh-my-zsh -omz $RESET			Install oh-my-zsh."
 	echo "$GREEN	-ds-store -ds $RESET				Remove .DS_Store files, prevent os from creating them."
 	echo "$GREEN	-reset -r $RESET				Reset your session."
-	echo "$GREEN	-update -u $RESET				Update your the wizzard."
+	echo "$GREEN	-update -u $RESET				Update the wizzard."
 	echo "$GREEN	-help -h $RESET				Show this help."
 }
 
@@ -412,7 +441,7 @@ function 42() {
 		;;
 		-reset|-r) 42-wizzard-reset
 		;;
-		-update|-u) sh ~/.42-wizzard-updater.sh > /dev/null 2>&1
+		-update|-u) 42-wizzard-update
 		;;
 		-brew) 42-wizzard-brew
 		;;
@@ -438,3 +467,5 @@ function 42() {
 		;;
 	esac
 }
+
+42-wizzard-migrate
