@@ -12,6 +12,8 @@ MAGENTA="\e[1;35m"
 CYAN="\e[1;36m"
 WIZZARD_VERSION="2.6.0"
 WIZZARD_URL="https://raw.githubusercontent.com/0xShady/42-wizzard/main/42-wizzard.sh"
+WIZZARD_CHECK_FILE="$HOME/.42-wizzard-last-check"
+WIZZARD_CHECK_INTERVAL=86400
 ANIMATION_RATE=0.3
 declare -a ACTIVE_LOADING
 
@@ -385,16 +387,56 @@ function 42-wizzard-pip() {
 	fi
 }
 
-function 42-wizzard-update() {
-	TMP_FILE=$(mktemp)
-	if curl -fsSL "$WIZZARD_URL" -o "$TMP_FILE" && grep -q '^WIZZARD_VERSION=' "$TMP_FILE"
+function 42-wizzard-fetch() {
+	local TMP_FILE=$(mktemp)
+	if curl -fsSL --max-time "$1" "$WIZZARD_URL" -o "$TMP_FILE" && grep -q '^WIZZARD_VERSION=' "$TMP_FILE"
 		then
-		mv "$TMP_FILE" "$HOME/.42-wizzard.sh"
-		source "$HOME/.42-wizzard.sh"
-		printf "42 wizzard $GREEN v$WIZZARD_VERSION $RESET \n"
+		echo "$TMP_FILE"
 	else
 		/bin/rm -f "$TMP_FILE"
+		return 1
+	fi
+}
+
+function 42-wizzard-install() {
+	mv "$1" "$HOME/.42-wizzard.sh"
+	source "$HOME/.42-wizzard.sh"
+	printf "42 wizzard $GREEN v$WIZZARD_VERSION $RESET \n"
+}
+
+function 42-wizzard-update() {
+	local TMP_FILE
+	if TMP_FILE=$(42-wizzard-fetch 10)
+		then
+		42-wizzard-install "$TMP_FILE"
+	else
 		printf "$RED Update failed $RESET \n"
+	fi
+}
+
+function 42-wizzard-auto-update() {
+	[[ -o interactive && -t 0 ]] || return 0
+	local NOW=$(date +%s)
+	local LAST_CHECK=$(cat "$WIZZARD_CHECK_FILE" 2> /dev/null)
+	(( NOW - ${LAST_CHECK:-0} < WIZZARD_CHECK_INTERVAL )) && return 0
+	echo "$NOW" > "$WIZZARD_CHECK_FILE"
+	local TMP_FILE
+	TMP_FILE=$(42-wizzard-fetch 3) || return 0
+	local REMOTE_VERSION=$(grep '^WIZZARD_VERSION=' "$TMP_FILE" | cut -d '"' -f 2)
+	autoload -Uz is-at-least
+	if is-at-least "$REMOTE_VERSION" "$WIZZARD_VERSION"
+		then
+		/bin/rm -f "$TMP_FILE"
+		return 0
+	fi
+	if read -q "?42 wizzard v$REMOTE_VERSION is available (you have v$WIZZARD_VERSION). Update now? [y/N] "
+		then
+		echo
+		42-wizzard-install "$TMP_FILE"
+	else
+		echo
+		/bin/rm -f "$TMP_FILE"
+		printf "Skipped. Run $GREEN 42 -update $RESET any time.\n"
 	fi
 }
 
@@ -469,3 +511,4 @@ function 42() {
 }
 
 42-wizzard-migrate
+42-wizzard-auto-update

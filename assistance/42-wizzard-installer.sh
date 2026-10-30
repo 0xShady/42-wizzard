@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-/bin/rm -rf ~/.42-wizzard.sh ~/.42-wizzard-updater.sh ~/.42-wizzard-loading > /dev/null 2>&1
+/bin/rm -rf ~/.42-wizzard.sh ~/.42-wizzard-updater.sh ~/.42-wizzard-loading ~/.42-wizzard-last-check > /dev/null 2>&1
 
 sed -n '/42-wizzard/!p' ~/.zshrc > .tmp && mv .tmp ~/.zshrc
 

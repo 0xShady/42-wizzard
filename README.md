@@ -34,8 +34,14 @@ curl -fsSL https://raw.githubusercontent.com/0xShady/42-wizzard/main/assistance/
 
 ## Updating
 
-The wizzard no longer updates itself when a shell starts. Run `42 -update` to get the latest version.
-Older installs switch to this by themselves the next time a shell starts.
+Once a day, when a shell starts, the wizzard checks for a new version and asks before updating:
+
+```
+42 wizzard v2.7.0 is available (you have v2.6.0). Update now? [y/N]
+```
+
+Nothing is installed without a yes. Run `42 -update` to update any time.
+Older installs (which updated silently on every shell start) switch to this by themselves.
 
 ## How to use
 
