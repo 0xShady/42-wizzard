@@ -41,6 +41,7 @@ Once a day, when a shell starts, the wizzard checks for a new version and asks b
 ```
 
 Nothing is installed without a yes. Run `42 -update` to update any time.
+Updates come from the latest [release](https://github.com/0xShady/42-wizzard/releases), not from every change on `main`.
 Older installs (which updated silently on every shell start) switch to this by themselves.
 
 ## How to use

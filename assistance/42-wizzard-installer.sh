@@ -4,7 +4,7 @@
 
 sed -n '/42-wizzard/!p' ~/.zshrc > .tmp && mv .tmp ~/.zshrc
 
-curl -fsSL https://raw.githubusercontent.com/0xShady/42-wizzard/main/42-wizzard.sh > ~/.42-wizzard.sh
+curl -fsSL https://github.com/0xShady/42-wizzard/releases/latest/download/42-wizzard.sh > ~/.42-wizzard.sh
 
 chmod +x ~/.42-wizzard.sh
 
